@@ -1,0 +1,12 @@
+[package]
+name = "jaws"
+version = "1.0.0"
+edition = "2021"
+authors = ["Artemij"]
+description = "a variety of daily used tools"
+license = "MIT"
+repository = "https://github.com/wayfar9r/todoit.git"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
