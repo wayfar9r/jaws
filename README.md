@@ -1,4 +1,2 @@
 # toolsdoit
-rust first project
-
-my experience in rust language
+Some useful functions to operation in cli
