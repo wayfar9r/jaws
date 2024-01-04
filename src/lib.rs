@@ -83,17 +83,27 @@ mod tests {
 
     struct StdinMock {
         values: RefCell<VecDeque<String>>,
+        calls: u32,
     }
 
     impl StdinMock {
+        fn new() -> StdinMock {
+            StdinMock {
+                values: RefCell::new(VecDeque::new()),
+                calls: 0,
+            }
+        }
+
         fn add_value(&mut self, val: String) -> &mut StdinMock {
             self.values.borrow_mut().push_back(val);
             self
         }
 
         fn mock_once(&mut self) -> String {
+            self.calls += 1;
             self.values.borrow_mut().pop_front().unwrap()
         }
+
     }
 
     impl Reader for StdinMock {
@@ -103,9 +113,7 @@ mod tests {
     }
 
     fn create_stdin_mock() -> StdinMock {
-        StdinMock {
-            values: RefCell::new(VecDeque::new()),
-        }
+        StdinMock::new()
     }
 
     #[test]
