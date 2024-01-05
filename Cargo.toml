@@ -10,3 +10,4 @@ repository = "https://github.com/wayfar9r/todoit.git"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+mocki = { version = "0.1.0", path = "../mocki" }

@@ -72,53 +72,32 @@ pub mod cli {
                 }
             }
         }
+
+        pub fn reader(&self) -> &T
+        where T: Reader {
+            &self.reader
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::RefCell, collections::VecDeque};
-
+    use mocki::{Mock, Mocki};
     use crate::cli::{Input, Reader};
 
-    struct StdinMock {
-        values: RefCell<VecDeque<String>>,
-        calls: u32,
-    }
-
-    impl StdinMock {
-        fn new() -> StdinMock {
-            StdinMock {
-                values: RefCell::new(VecDeque::new()),
-                calls: 0,
-            }
-        }
-
-        fn add_value(&mut self, val: String) -> &mut StdinMock {
-            self.values.borrow_mut().push_back(val);
-            self
-        }
-
-        fn mock_once(&mut self) -> String {
-            self.calls += 1;
-            self.values.borrow_mut().pop_front().unwrap()
-        }
-
-    }
-
-    impl Reader for StdinMock {
+    impl Reader for Mock<String> {
         fn read_string(&self) -> Result<String, std::io::Error> {
-            Ok(self.values.borrow_mut().pop_front().unwrap())
+            Ok(self.mock_once())
         }
     }
 
-    fn create_stdin_mock() -> StdinMock {
-        StdinMock::new()
+    fn create_stdin_mock() -> Mock<String> {
+        Mock::new()
     }
 
     #[test]
     fn test_bool_input() {
-        let mut stdin_mock = create_stdin_mock();
+        let stdin_mock = create_stdin_mock();
         stdin_mock
             .add_value("true".into())
             .add_value("false".into());
@@ -130,10 +109,10 @@ mod tests {
 
     #[test]
     fn test_until_input() {
-        let mut stdin_mock = create_stdin_mock();
+        let stdin_mock = create_stdin_mock();
         stdin_mock
             .add_value("what?".into())
-            .add_value("0".into())
+            .add_value("1".into())
             .add_value("100".into());
         let input = Input::new(stdin_mock);
         let input_res = input.read_until(|s| {
@@ -143,5 +122,6 @@ mod tests {
             false
         });
         assert!(input_res.is_ok());
+        assert!(input.reader().calls() == 3);
     }
 }

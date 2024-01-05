@@ -1,2 +1,3 @@
-# toolsdoit
-Some useful functions to operation in cli
+# jaws
+
+Some useful functions to operate in cli
