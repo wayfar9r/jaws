@@ -99,8 +99,8 @@ mod tests {
     fn test_bool_input() {
         let stdin_mock = create_stdin_mock();
         stdin_mock
-            .add_value("true".into())
-            .add_value("false".into());
+            .add_value("true".into());
+        stdin_mock.add_value("false".into());
         let input = Input::new(stdin_mock);
         let input_result = input.read();
         assert!(input_result.is_ok());
@@ -110,10 +110,9 @@ mod tests {
     #[test]
     fn test_until_input() {
         let stdin_mock = create_stdin_mock();
-        stdin_mock
-            .add_value("what?".into())
-            .add_value("1".into())
-            .add_value("100".into());
+        stdin_mock.add_value("what?".into());
+        stdin_mock.add_value("1".into());
+        stdin_mock.add_value("100".into());
         let input = Input::new(stdin_mock);
         let input_res = input.read_until(|s| {
             if let Ok(number) = s.parse::<u16>() {
