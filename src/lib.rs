@@ -1,8 +1,8 @@
-//! # Tools
+//! # Cli helpers
 //!
 //! a variety of useful tools
 
-// module with tools
+// module with cli tools
 pub mod cli {
 
     use std::fmt::Display;

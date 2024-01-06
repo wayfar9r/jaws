@@ -2,10 +2,11 @@
 name = "jaws"
 version = "0.1.0"
 edition = "2021"
-authors = ["Artemij"]
-description = "a variety of daily used tools"
+authors = ["Artemij Artemev"]
+keywords = ["cli", "read", "input"]
+description = "tools to operate in cli"
 license = "MIT"
-repository = "https://github.com/wayfar9r/todoit.git"
+repository = "https://github.com/wayfar9r/jaws.git"
 
 [dependencies]
 mocki = "0.1.1"
