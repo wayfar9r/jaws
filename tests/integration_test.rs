@@ -1,4 +1,4 @@
-use jaws::cli::Input;
+use jaw::cli::Input;
 use std::{io::stdin, error::Error};
 
 #[test]
