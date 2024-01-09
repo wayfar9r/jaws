@@ -82,6 +82,8 @@ pub mod cli {
 
 #[cfg(test)]
 mod tests {
+    use std::io::stdin;
+
     use mocki::{Mock, Mocki};
     use crate::cli::{Input, Reader};
 
@@ -93,6 +95,11 @@ mod tests {
 
     fn create_stdin_mock() -> Mock<String> {
         Mock::new()
+    }
+
+    #[test]
+    fn basic() {
+        let Input = Input::new(stdin());
     }
 
     #[test]
