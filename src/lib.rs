@@ -99,7 +99,7 @@ mod tests {
 
     #[test]
     fn basic() {
-        let Input = Input::new(stdin());
+        let _input = Input::new(stdin());
     }
 
     #[test]
