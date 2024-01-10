@@ -14,17 +14,36 @@ pub mod cli {
     }
 
     #[derive(Debug)]
-    pub struct InputReadError(String);
+    pub enum ErrorKind {
+        MorphedError,
+        AttemptsExceedError,
+        InputRequirementError,
+    }
+
+    #[derive(Debug)]
+    pub struct InputReadError {
+        msg: String,
+        kind: ErrorKind,
+    }
+
+    impl InputReadError {
+        pub fn kind(&self) -> &ErrorKind {
+            &self.kind
+        }
+    }
 
     impl Display for InputReadError {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{}", self.0)
+            write!(f, "{}", self.msg)
         }
     }
 
     impl From<io::Error> for InputReadError {
         fn from(value: io::Error) -> Self {
-            InputReadError(value.to_string())
+            InputReadError {
+                msg: value.to_string(),
+                kind: ErrorKind::MorphedError,
+            }
         }
     }
 
@@ -56,25 +75,50 @@ pub mod cli {
             Ok(inp)
         }
 
-        /// read and check
-        /// 
-        /// reads an input and passes it to the predicate
-        /// until a predicate isn't positive
-        ///
-        pub fn read_until<Pf>(&self, p: Pf) -> Result<String, InputReadError>
+        pub fn demand<Pf>(&self, p: Pf) -> Result<String, InputReadError>
         where
             Pf: Fn(&str) -> bool,
         {
-            loop {
+            let inp = self.reader.read_string()?;
+            if p(&inp) {
+                return Ok(inp);
+            }
+            Err(InputReadError {
+                msg: "wrong input".into(),
+                kind: ErrorKind::InputRequirementError,
+            })
+        }
+
+        /// read and check
+        ///
+        /// reads an input and passes it to the predicate
+        /// until a predicate isn't positive
+        ///
+        pub fn read_until<Pf>(&self, p: Pf, attempts: Option<u8>) -> Result<String, InputReadError>
+        where
+            Pf: Fn(&str) -> bool,
+        {
+            let attempts = if let Some(attempts) = attempts {
+                attempts
+            } else {
+                3u8
+            };
+            for _ in 0..attempts {
                 let input_str = self.read()?;
                 if p(&input_str) {
                     return Ok(input_str);
                 }
             }
+            Err(InputReadError {
+                msg: "attempts to read input failed".into(),
+                kind: ErrorKind::AttemptsExceedError,
+            })
         }
 
         pub fn reader(&self) -> &T
-        where T: Reader {
+        where
+            T: Reader,
+        {
             &self.reader
         }
     }
@@ -84,8 +128,8 @@ pub mod cli {
 mod tests {
     use std::io::stdin;
 
-    use mocki::{Mock, Mocki};
     use crate::cli::{Input, Reader};
+    use mocki::{Mock, Mocki};
 
     impl Reader for Mock<String> {
         fn read_string(&self) -> Result<String, std::io::Error> {
@@ -105,8 +149,7 @@ mod tests {
     #[test]
     fn test_bool_input() {
         let stdin_mock = create_stdin_mock();
-        stdin_mock
-            .add_value("true".into());
+        stdin_mock.add_value("true".into());
         stdin_mock.add_value("false".into());
         let input = Input::new(stdin_mock);
         let input_result = input.read();
@@ -121,12 +164,15 @@ mod tests {
         stdin_mock.add_value("1".into());
         stdin_mock.add_value("100".into());
         let input = Input::new(stdin_mock);
-        let input_res = input.read_until(|s| {
-            if let Ok(number) = s.parse::<u16>() {
-                return number % 100 == 0;
-            }
-            false
-        });
+        let input_res = input.read_until(
+            |s| {
+                if let Ok(number) = s.parse::<u16>() {
+                    return number % 100 == 0;
+                }
+                false
+            },
+            Some(3),
+        );
         assert!(input_res.is_ok());
         assert!(input.reader().calls() == 3);
     }
