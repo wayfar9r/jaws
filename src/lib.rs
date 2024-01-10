@@ -13,9 +13,9 @@ pub mod cli {
         fn read_string(&self) -> Result<String, io::Error>;
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq)]
     pub enum ErrorKind {
-        MorphedError,
+        IoError,
         AttemptsExceedError,
         InputRequirementError,
     }
@@ -42,7 +42,7 @@ pub mod cli {
         fn from(value: io::Error) -> Self {
             InputReadError {
                 msg: value.to_string(),
-                kind: ErrorKind::MorphedError,
+                kind: ErrorKind::IoError,
             }
         }
     }
@@ -132,7 +132,7 @@ pub mod cli {
 mod tests {
     use std::io::stdin;
 
-    use crate::cli::{Input, Reader};
+    use crate::cli::{Input, Reader, ErrorKind};
     use mocki::{Mock, Mocki};
 
     impl Reader for Mock<String> {
@@ -151,18 +151,32 @@ mod tests {
     }
 
     #[test]
-    fn test_bool_input() {
+    fn should_get_bool_input() {
         let stdin_mock = create_stdin_mock();
         stdin_mock.add_value("true".into());
         stdin_mock.add_value("false".into());
         let input = Input::new(stdin_mock);
         let input_result = input.read();
         assert!(input_result.is_ok());
-        assert_eq!(input_result.unwrap(), "true".to_string());
+        assert_eq!(input_result.unwrap().parse::<bool>().unwrap(), true);
     }
 
     #[test]
-    fn test_until_input() {
+    fn should_fail_on_wrong_input() {
+        let stdin_mock = Mock::new();
+        stdin_mock.add_value("no, i don't have to type what you want!".to_string());
+        let input = Input::new(stdin_mock);
+        let input_result = input.demand(|s| {
+            let res = s.parse::<u8>();
+            res.is_ok()
+        });
+        assert!(input_result.is_err());
+        assert_eq!(&ErrorKind::InputRequirementError, input_result.err().unwrap().kind());
+        
+    }
+
+    #[test]
+    fn should_succeed_on_third_attempt() {
         let stdin_mock = create_stdin_mock();
         stdin_mock.add_value("what?".into());
         stdin_mock.add_value("1".into());
