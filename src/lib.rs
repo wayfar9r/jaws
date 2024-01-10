@@ -132,7 +132,7 @@ pub mod cli {
 mod tests {
     use std::io::stdin;
 
-    use crate::cli::{Input, Reader, ErrorKind};
+    use crate::cli::{ErrorKind, Input, Reader};
     use mocki::{Mock, Mocki};
 
     impl Reader for Mock<String> {
@@ -171,8 +171,10 @@ mod tests {
             res.is_ok()
         });
         assert!(input_result.is_err());
-        assert_eq!(&ErrorKind::InputRequirementError, input_result.err().unwrap().kind());
-        
+        assert_eq!(
+            &ErrorKind::InputRequirementError,
+            input_result.err().unwrap().kind()
+        );
     }
 
     #[test]
