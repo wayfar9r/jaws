@@ -75,12 +75,12 @@ pub mod cli {
             Ok(inp)
         }
 
-        pub fn demand<Pf>(&self, p: Pf) -> Result<String, InputReadError>
+        pub fn demand<Pf>(&self, claim: Pf) -> Result<String, InputReadError>
         where
             Pf: Fn(&str) -> bool,
         {
             let inp = self.reader.read_string()?;
-            if p(&inp) {
+            if claim(&inp) {
                 return Ok(inp);
             }
             Err(InputReadError {
@@ -94,7 +94,11 @@ pub mod cli {
         /// reads an input and passes it to the predicate
         /// until a predicate isn't positive
         ///
-        pub fn read_until<Pf>(&self, p: Pf, attempts: Option<u8>) -> Result<String, InputReadError>
+        pub fn read_until<Pf>(
+            &self,
+            claim: Pf,
+            attempts: Option<u8>,
+        ) -> Result<String, InputReadError>
         where
             Pf: Fn(&str) -> bool,
         {
@@ -105,12 +109,12 @@ pub mod cli {
             };
             for _ in 0..attempts {
                 let input_str = self.read()?;
-                if p(&input_str) {
+                if claim(&input_str) {
                     return Ok(input_str);
                 }
             }
             Err(InputReadError {
-                msg: "attempts to read input failed".into(),
+                msg: "attempts to read input were failed".into(),
                 kind: ErrorKind::AttemptsExceedError,
             })
         }
