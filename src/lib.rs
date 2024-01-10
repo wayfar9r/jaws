@@ -6,8 +6,8 @@
 pub mod cli {
 
     use std::fmt::Display;
-    use std::io::Stdin;
     use std::io::{self};
+    use std::io::{stdin, Stdin};
 
     pub trait Reader {
         fn read_string(&self) -> Result<String, io::Error>;
@@ -124,6 +124,12 @@ pub mod cli {
             T: Reader,
         {
             &self.reader
+        }
+    }
+
+    impl Default for Input<Stdin> {
+        fn default() -> Self {
+            Input { reader: stdin() }
         }
     }
 }
