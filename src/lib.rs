@@ -5,7 +5,7 @@
 // module with cli tools
 pub mod cli {
 
-    use std::fmt::Display;
+    use std::fmt::{Debug, Display};
     use std::io::{self};
     use std::io::{stdin, Stdin};
 
@@ -47,6 +47,22 @@ pub mod cli {
         }
     }
 
+    pub trait Claimy {
+        fn demand<F, Ft, Fe>(&self, claim: F) -> Result<String, InputReadError>
+        where
+            Fe: Display + Debug,
+            F: Fn(&str) -> Result<Ft, Fe>;
+
+        fn demand_until<F, Ft, Fe>(
+            &self,
+            claim: F,
+            attempts: Option<u8>,
+        ) -> Result<String, InputReadError>
+        where
+            Fe: Display + Debug,
+            F: Fn(&str) -> Result<Ft, Fe>;
+    }
+
     pub struct Input<T>
     where
         T: Reader,
@@ -75,18 +91,31 @@ pub mod cli {
             Ok(inp)
         }
 
-        pub fn demand<Pf>(&self, claim: Pf) -> Result<String, InputReadError>
+        pub fn reader(&self) -> &T
         where
-            Pf: Fn(&str) -> bool,
+            T: Reader,
+        {
+            &self.reader
+        }
+    }
+
+    impl<R> Claimy for Input<R>
+    where
+        R: Reader,
+    {
+        fn demand<F, Ft, Fe>(&self, claim: F) -> Result<String, InputReadError>
+        where
+            Fe: Debug + Display,
+            F: Fn(&str) -> Result<Ft, Fe>,
         {
             let inp = self.reader.read_string()?;
-            if claim(&inp) {
-                return Ok(inp);
+            match claim(&inp) {
+                Ok(_) => Ok(inp),
+                Err(err) => Err(InputReadError {
+                    msg: format!("wrong input. {}", err),
+                    kind: ErrorKind::InputRequirementError,
+                }),
             }
-            Err(InputReadError {
-                msg: "wrong input".into(),
-                kind: ErrorKind::InputRequirementError,
-            })
         }
 
         /// read and check
@@ -94,36 +123,34 @@ pub mod cli {
         /// reads an input and passes it to the predicate
         /// until a predicate isn't positive
         ///
-        pub fn read_until<Pf>(
+        fn demand_until<F, Ft, Fe>(
             &self,
-            claim: Pf,
+            claim: F,
             attempts: Option<u8>,
         ) -> Result<String, InputReadError>
         where
-            Pf: Fn(&str) -> bool,
+            Fe: Display + Debug,
+            F: Fn(&str) -> Result<Ft, Fe>,
         {
             let attempts = if let Some(attempts) = attempts {
                 attempts
             } else {
                 3u8
             };
-            for _ in 0..attempts {
+            let mut last_error_msg = "".to_string();
+            for attempt in 0..attempts {
                 let input_str = self.read()?;
-                if claim(&input_str) {
+                let claim_res = claim(&input_str);
+                if claim_res.is_ok() {
                     return Ok(input_str);
+                } else if attempt == attempts - 1 {
+                    last_error_msg = claim_res.err().unwrap().to_string();
                 }
             }
             Err(InputReadError {
-                msg: "attempts to read input were failed".into(),
+                msg: format!("attempts to read input were failed. {}", last_error_msg),
                 kind: ErrorKind::AttemptsExceedError,
             })
-        }
-
-        pub fn reader(&self) -> &T
-        where
-            T: Reader,
-        {
-            &self.reader
         }
     }
 
@@ -136,9 +163,7 @@ pub mod cli {
 
 #[cfg(test)]
 mod tests {
-    use std::io::stdin;
-
-    use crate::cli::{ErrorKind, Input, Reader};
+    use crate::cli::{Claimy, ErrorKind, Input, Reader};
     use mocki::{Mock, Mocki};
 
     impl Reader for Mock<String> {
@@ -153,7 +178,8 @@ mod tests {
 
     #[test]
     fn basic() {
-        let _input = Input::new(stdin());
+        let _input = Input::default();
+        // todo!("assert with Stdin");
     }
 
     #[test]
@@ -173,8 +199,7 @@ mod tests {
         stdin_mock.add_value("no, i don't have to type what you want!".to_string());
         let input = Input::new(stdin_mock);
         let input_result = input.demand(|s| {
-            let res = s.parse::<u8>();
-            res.is_ok()
+            return s.parse::<u8>();
         });
         assert!(input_result.is_err());
         assert_eq!(
@@ -184,18 +209,30 @@ mod tests {
     }
 
     #[test]
+    fn should_satisfy_input_demand() {
+        let stdin_mock = Mock::new();
+        stdin_mock.add_value("10".to_string());
+        let input = Input::new(stdin_mock);
+        let input_result = input.demand(|s| {
+            return s.parse::<u8>();
+        });
+        assert!(input_result.is_ok());
+    }
+
+    #[test]
     fn should_succeed_on_third_attempt() {
         let stdin_mock = create_stdin_mock();
         stdin_mock.add_value("what?".into());
         stdin_mock.add_value("1".into());
         stdin_mock.add_value("100".into());
         let input = Input::new(stdin_mock);
-        let input_res = input.read_until(
-            |s| {
-                if let Ok(number) = s.parse::<u16>() {
-                    return number % 100 == 0;
+        let input_res = input.demand_until(
+            |s| match s.parse::<u16>() {
+                Ok(n) if n % 100 == 0 => {
+                    return Ok(());
                 }
-                false
+                Ok(_) => Err("please type 100".to_string()),
+                Err(err) => Err(err.to_string()),
             },
             Some(3),
         );
